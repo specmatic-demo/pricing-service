@@ -1,0 +1,10 @@
+services:
+  my-app:
+    build: .
+    container_name: pricing-service
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      PRICING_PROTO_PATH: /contracts/contracts/services/pricing-service/rpc/pricing.proto
+    volumes:
+      - ../central-contract-repository:/contracts:ro

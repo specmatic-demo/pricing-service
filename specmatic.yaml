@@ -1,0 +1,26 @@
+version: 3
+systemUnderTest:
+  service:
+    $ref: "#/components/services/pricingService"
+    runOptions:
+      protobuf:
+        host: localhost
+        port: 9000
+        protocVersion: "3.23.4"
+dependencies:
+  services: []
+components:
+  sources:
+    centralContractRepo:
+      git:
+        url: https://github.com/specmatic-demo/central-contract-repository
+  services:
+    pricingService:
+      description: "Pricing Service"
+      definitions:
+        - definition:
+            source:
+              $ref: "#/components/sources/centralContractRepo"
+            specs:
+              - spec:
+                  path: "contracts/services/pricing-service/rpc/pricing.proto"
