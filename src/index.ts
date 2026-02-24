@@ -1,14 +1,15 @@
-'use strict';
-
-const fs = require('fs');
-const path = require('path');
-const grpc = require('@grpc/grpc-js');
-const protoLoader = require('@grpc/proto-loader');
+import fs from 'node:fs';
+import path from 'node:path';
+import * as grpc from '@grpc/grpc-js';
+import * as protoLoader from '@grpc/proto-loader';
+import { fileURLToPath } from 'node:url';
 
 const host = process.env.PRICING_HOST || '0.0.0.0';
 const port = Number.parseInt(process.env.PRICING_PORT || '9000', 10);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-function findFirstExistingPath(paths) {
+function findFirstExistingPath(paths: Array<string | undefined>): string | null {
   for (const candidate of paths) {
     if (candidate && fs.existsSync(candidate)) {
       return candidate;
@@ -36,9 +37,30 @@ const packageDefinition = protoLoader.loadSync(protoPath, {
 });
 const pricingProto = grpc.loadPackageDefinition(packageDefinition).pricing.v1;
 
-function quotePrice(call, callback) {
+type QuotePriceRequest = {
+  sku?: string;
+  quantity?: number | string;
+  customerTier?: string;
+};
+
+type QuotePriceResponse = {
+  sku: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  currency: string;
+};
+
+function quotePrice(
+  call: grpc.ServerUnaryCall<QuotePriceRequest, QuotePriceResponse>,
+  callback: grpc.sendUnaryData<QuotePriceResponse>
+): void {
   const request = call.request || {};
-  const quantity = Number.isFinite(request.quantity) ? request.quantity : Number.parseInt(String(request.quantity || 1), 10) || 1;
+  const quantityValue =
+    typeof request.quantity === 'number'
+      ? request.quantity
+      : Number.parseInt(String(request.quantity ?? 1), 10);
+  const quantity = Number.isFinite(quantityValue) ? quantityValue : 1;
   const unitPrice = 100.0;
   callback(null, {
     sku: request.sku || 'SKU-DEFAULT',
@@ -52,7 +74,7 @@ function quotePrice(call, callback) {
 const server = new grpc.Server();
 server.addService(pricingProto.PricingService.service, { quotePrice });
 
-server.bindAsync(`${host}:${port}`, grpc.ServerCredentials.createInsecure(), (error, boundPort) => {
+server.bindAsync(`${host}:${port}`, grpc.ServerCredentials.createInsecure(), (error: Error | null, boundPort: number) => {
   if (error) {
     throw error;
   }

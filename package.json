@@ -3,11 +3,15 @@
   "version": "1.0.0",
   "private": true,
   "description": "Demo pricing gRPC service",
+  "scripts": {
+    "start": "tsx src/index.ts"
+  },
   "dependencies": {
     "@grpc/grpc-js": "^1.11.3",
-    "@grpc/proto-loader": "^0.7.13"
+    "@grpc/proto-loader": "^0.7.13",
+    "tsx": "^4.20.5"
   },
-  "scripts": {
-    "start": "node src/index.js"
+  "devDependencies": {
+    "@types/node": "^24.3.0"
   }
 }
