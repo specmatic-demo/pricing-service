@@ -51,6 +51,22 @@ type QuotePriceResponse = {
   currency: string;
 };
 
+type BulkQuoteLine = {
+  sku?: string;
+  quantity?: number | string;
+};
+
+type BulkQuoteRequest = {
+  customerTier?: string;
+  lines?: BulkQuoteLine[];
+};
+
+type BulkQuoteResponse = {
+  quotes: QuotePriceResponse[];
+  grandTotal: number;
+  currency: string;
+};
+
 function quotePrice(
   call: grpc.ServerUnaryCall<QuotePriceRequest, QuotePriceResponse>,
   callback: grpc.sendUnaryData<QuotePriceResponse>
@@ -71,8 +87,40 @@ function quotePrice(
   });
 }
 
+function getBulkQuote(
+  call: grpc.ServerUnaryCall<BulkQuoteRequest, BulkQuoteResponse>,
+  callback: grpc.sendUnaryData<BulkQuoteResponse>
+): void {
+  const request = call.request || {};
+  const lines = Array.isArray(request.lines) ? request.lines : [];
+
+  const quotes = lines.map((line, index) => {
+    const quantityValue =
+      typeof line.quantity === 'number'
+        ? line.quantity
+        : Number.parseInt(String(line.quantity ?? 1), 10);
+    const quantity = Number.isFinite(quantityValue) && quantityValue > 0 ? quantityValue : 1;
+    const unitPrice = 100 + index * 5;
+
+    return {
+      sku: line.sku || `SKU-${index + 1}`,
+      quantity,
+      unitPrice,
+      totalPrice: unitPrice * quantity,
+      currency: 'USD'
+    };
+  });
+
+  const grandTotal = quotes.reduce((sum, quote) => sum + quote.totalPrice, 0);
+  callback(null, {
+    quotes,
+    grandTotal,
+    currency: 'USD'
+  });
+}
+
 const server = new grpc.Server();
-server.addService(pricingProto.PricingService.service, { quotePrice });
+server.addService(pricingProto.PricingService.service, { quotePrice, getBulkQuote });
 
 server.bindAsync(`${host}:${port}`, grpc.ServerCredentials.createInsecure(), (error: Error | null, boundPort: number) => {
   if (error) {
