@@ -3,6 +3,12 @@ import path from 'node:path';
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 import { fileURLToPath } from 'node:url';
+import type {
+  BulkQuoteRequest,
+  BulkQuoteResponse,
+  QuotePriceRequest,
+  QuotePriceResponse
+} from './types';
 
 const host = process.env.PRICING_HOST || '0.0.0.0';
 const port = Number.parseInt(process.env.PRICING_PORT || '9000', 10);
@@ -35,37 +41,7 @@ const packageDefinition = protoLoader.loadSync(protoPath, {
   defaults: true,
   oneofs: true
 });
-const pricingProto = grpc.loadPackageDefinition(packageDefinition).pricing.v1;
-
-type QuotePriceRequest = {
-  sku?: string;
-  quantity?: number | string;
-  customerTier?: string;
-};
-
-type QuotePriceResponse = {
-  sku: string;
-  quantity: number;
-  unitPrice: number;
-  totalPrice: number;
-  currency: string;
-};
-
-type BulkQuoteLine = {
-  sku?: string;
-  quantity?: number | string;
-};
-
-type BulkQuoteRequest = {
-  customerTier?: string;
-  lines?: BulkQuoteLine[];
-};
-
-type BulkQuoteResponse = {
-  quotes: QuotePriceResponse[];
-  grandTotal: number;
-  currency: string;
-};
+const pricingProto = (grpc.loadPackageDefinition(packageDefinition) as any).pricing.v1;
 
 function quotePrice(
   call: grpc.ServerUnaryCall<QuotePriceRequest, QuotePriceResponse>,
